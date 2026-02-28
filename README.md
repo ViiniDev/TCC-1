@@ -163,25 +163,7 @@ O projeto valida experimentalmente:
 * A diferença estrutural entre convolução e multiplicação densa
 * O comportamento microarquitetural medido por IPC e cache-misses
 
-Ele constitui um benchmark experimental sólido para análise de desempenho em precisão dupla.
-
 ---
-
-# 🎯 Situação Atual do Projeto
-
-✔ Implementação funcional
-✔ Automação correta
-✔ Dados estatisticamente válidos
-✔ Análise consolidada
-✔ Metodologia clara
-✔ Base pronta para capítulo experimental
-
----
-
-Se quiser, agora posso:
-
-* Estruturar o texto formal do capítulo de Resultados para o TCC
-* Ou evoluir o projeto para a próxima fase: computação aproximada.
 
 
 # ✅ 1️⃣ Verificação Técnica dos Dados
@@ -203,17 +185,11 @@ As repetições apresentam:
 * Sem valores zerados
 * Sem erro de parsing
 
-Isso indica:
-
-✔ Ambiente controlado
-✔ Script correto
-✔ Dados confiáveis
 
 ---
 
 # 📊 2️⃣ Interpretação Científica dos Resultados
 
-Vou organizar por hipótese experimental.
 
 ---
 
@@ -230,9 +206,6 @@ Observação experimental:
 * Ao dobrar N (500 → 1000)
 * O tempo cresce aproximadamente 4x
 
-Isso confirma comportamento quadrático esperado.
-
-✔ Validação empírica da complexidade.
 
 ---
 
@@ -251,7 +224,6 @@ Observação:
 
 ✔ Crescimento cúbico confirmado experimentalmente.
 
-Isso é extremamente importante para o TCC.
 
 ---
 
@@ -304,18 +276,15 @@ Interpretação:
 * Não totalmente memory-bound
 * Nem totalmente compute-bound
 
-Indica bom equilíbrio microarquitetural.
-
 ---
 
 # 🎯 Conclusão Técnica dos Resultados
-
-Você já pode afirmar formalmente:
 
 1. Convolução apresenta crescimento quadrático
 2. DGEMM apresenta crescimento cúbico
 3. Layout de memória impacta significativamente o desempenho
 4. IPC e cache-miss confirmam efeito da localidade espacial
+
 
 
 ---
