@@ -5,7 +5,7 @@ echo "program,N,dist,K,tempo,cycles,instructions,cache_misses" > resultados.csv
 PROGRAMS=("conv_linear" "conv_malloc" "dgemm")
 NS=(500 1000)
 DISTS=(0 1 2)
-KS=(3 5)
+KS=(3 5 7)
 
 for PROG in "${PROGRAMS[@]}"
 do

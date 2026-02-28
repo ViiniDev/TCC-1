@@ -2,14 +2,26 @@
 #include <stdlib.h>
 #include <time.h>
 
-void dgemm(int N, double *A, double *B, double *C) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            double sum = 0.0;
-            for (int k = 0; k < N; k++) {
-                sum += A[i*N + k] * B[k*N + j];
+void dgemm_blocked(int N, int BS, double *A, double *B, double *C) {
+
+    for (int ii = 0; ii < N; ii += BS) {
+        for (int jj = 0; jj < N; jj += BS) {
+            for (int kk = 0; kk < N; kk += BS) {
+
+                for (int i = ii; i < ii + BS && i < N; i++) {
+                    for (int j = jj; j < jj + BS && j < N; j++) {
+
+                        double sum = C[i*N + j];
+
+                        for (int k = kk; k < kk + BS && k < N; k++) {
+                            sum += A[i*N + k] * B[k*N + j];
+                        }
+
+                        C[i*N + j] = sum;
+                    }
+                }
+
             }
-            C[i*N + j] = sum;
         }
     }
 }
@@ -30,7 +42,9 @@ int main(int argc, char *argv[]) {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC,&start);
 
-    dgemm(N,A,B,C);
+    int BS = 32;  // tamanho do bloco
+
+    dgemm_blocked(N, BS, A, B, C);
 
     clock_gettime(CLOCK_MONOTONIC,&end);
 

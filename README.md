@@ -47,7 +47,7 @@ gcc -O3 -march=native -o dgemm dgemm_naive.c
 
 ```bash
 chmod +x run_all.sh
-./run_all.sh
+sudo ./run_all.sh
 ```
 
 Gera:
