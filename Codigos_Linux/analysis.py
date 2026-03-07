@@ -8,6 +8,7 @@ df["tempo"] = pd.to_numeric(df["tempo"], errors="coerce")
 df["cycles"] = pd.to_numeric(df["cycles"], errors="coerce")
 df["instructions"] = pd.to_numeric(df["instructions"], errors="coerce")
 df["cache_misses"] = pd.to_numeric(df["cache_misses"], errors="coerce")
+df["cache_miss_rate"] = df["cache_misses"] / df["cache_references"]
 
 # Calcular IPC
 df["IPC"] = df["instructions"] / df["cycles"]

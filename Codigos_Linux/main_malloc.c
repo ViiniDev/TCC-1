@@ -114,5 +114,16 @@ int main(int argc, char *argv[]) {
             checksum += saida[i][j];
     printf("Checksum: %.6f\n", checksum);
 
+    for(int i=0;i<N;i++){
+    free(mat[i]);
+    free(saida[i]);
+    }
+
+    for(int i=0;i<K;i++)
+    free(ker[i]);
+
+    free(mat);
+    free(saida);
+    free(ker);
     return 0;
 }

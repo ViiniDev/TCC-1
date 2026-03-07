@@ -28,30 +28,54 @@ void dgemm_blocked(int N, int BS, double *A, double *B, double *C) {
 
 int main(int argc, char *argv[]) {
 
+    if(argc < 3){
+        printf("Uso: %s <N> <BS>\n", argv[0]);
+        return 1;
+    }
+
     int N = atoi(argv[1]);
+    int BS = atoi(argv[2]);
 
-    double *A = malloc(N*N*sizeof(double));
-    double *B = malloc(N*N*sizeof(double));
-    double *C = calloc(N*N,sizeof(double));
+    srand(time(NULL));
 
-    for (long long i=0;i<(long long)N*N;i++) {
+    long long size = (long long)N * N;
+
+    double *A = malloc(size * sizeof(double));
+    double *B = malloc(size * sizeof(double));
+    double *C = calloc(size, sizeof(double));
+
+    if(!A || !B || !C){
+        printf("Erro de alocação\n");
+        return 1;
+    }
+
+    for(long long i = 0; i < size; i++){
         A[i] = (double)rand()/RAND_MAX;
         B[i] = (double)rand()/RAND_MAX;
     }
 
     struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC,&start);
 
-    int BS = 32;  // tamanho do bloco
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     dgemm_blocked(N, BS, A, B, C);
 
-    clock_gettime(CLOCK_MONOTONIC,&end);
+    clock_gettime(CLOCK_MONOTONIC, &end);
 
     double tempo = (end.tv_sec - start.tv_sec) +
-                   (end.tv_nsec - start.tv_nsec)/1e9;
+                   (end.tv_nsec - start.tv_nsec) / 1e9;
 
-    printf("N=%d Tempo=%.6f s\n",N,tempo);
+    // cálculo de FLOPs
+    double flops = 2.0 * N * N * N;
 
-    free(A); free(B); free(C);
+    // cálculo de GFLOPS
+    double gflops = flops / (tempo * 1e9);
+
+    printf("N=%d BS=%d Tempo=%.6f s GFLOPS=%.2f\n", N, BS, tempo, gflops);
+
+    free(A);
+    free(B);
+    free(C);
+
+    return 0;
 }
