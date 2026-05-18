@@ -83,6 +83,10 @@ def save_plot(name):
     plt.close()
 
 
+def outside_legend(ncol=2):
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=ncol, frameon=True)
+
+
 def plot_time_by_n(df):
     grouped = (
         df.groupby(["series", "N"], dropna=False)["tempo"]
@@ -99,7 +103,7 @@ def plot_time_by_n(df):
     plt.xlabel("Tamanho da matriz (N)")
     plt.ylabel("Tempo medio (s)")
     plt.title("Tempo de execucao por tamanho da matriz")
-    plt.legend(ncol=2)
+    outside_legend(ncol=2)
     save_plot("01_tempo_por_N.png")
 
 
@@ -122,7 +126,7 @@ def plot_speedup(df):
     plt.xlabel("Tamanho da matriz (N)")
     plt.ylabel("Speedup medio vs exato")
     plt.title("Ganho de desempenho das versoes aproximadas")
-    plt.legend(ncol=2)
+    outside_legend(ncol=2)
     save_plot("02_speedup_aproximado.png")
 
 
@@ -141,10 +145,11 @@ def plot_relative_error(df):
     for series, sub in grouped.groupby("series"):
         plt.plot(sub["N"], sub["error_rel_mean"], marker="o", linewidth=2, label=series)
 
+    plt.yscale("log")
     plt.xlabel("Tamanho da matriz (N)")
-    plt.ylabel("Erro relativo medio")
+    plt.ylabel("Erro relativo medio (escala log)")
     plt.title("Erro medio das versoes aproximadas")
-    plt.legend(ncol=2)
+    outside_legend(ncol=2)
     save_plot("03_erro_relativo_medio.png")
 
 
@@ -158,15 +163,16 @@ def plot_error_vs_speedup(df):
     )
 
     plt.figure()
-    plt.scatter(grouped["error"], grouped["speedup"], s=90)
 
     for _, row in grouped.iterrows():
-        plt.annotate(row["series"], (row["error"], row["speedup"]), xytext=(6, 5), textcoords="offset points")
+        plt.scatter(row["error"], row["speedup"], s=95, label=row["series"])
 
     plt.axhline(1.0, color="black", linestyle="--", linewidth=1)
-    plt.xlabel("Erro relativo medio")
+    plt.xscale("log")
+    plt.xlabel("Erro relativo medio (escala log)")
     plt.ylabel("Speedup medio vs exato")
     plt.title("Troca entre erro e desempenho")
+    outside_legend(ncol=2)
     save_plot("04_erro_vs_speedup.png")
 
 
@@ -186,7 +192,7 @@ def plot_ipc(df):
     plt.xlabel("Tamanho da matriz (N)")
     plt.ylabel("IPC medio")
     plt.title("Instrucoes por ciclo por tamanho da matriz")
-    plt.legend(ncol=2)
+    outside_legend(ncol=2)
     save_plot("05_ipc_por_N.png")
 
 
@@ -206,7 +212,7 @@ def plot_cache_miss_rate(df):
     plt.xlabel("Tamanho da matriz (N)")
     plt.ylabel("Taxa media de cache miss")
     plt.title("Taxa de cache miss por tamanho da matriz")
-    plt.legend(ncol=2)
+    outside_legend(ncol=2)
     save_plot("06_cache_miss_rate_por_N.png")
 
 
@@ -220,15 +226,17 @@ def plot_time_vs_error_by_program(df):
     )
 
     plt.figure()
-    plt.scatter(grouped["tempo"], grouped["error"], s=90)
 
     for _, row in grouped.iterrows():
         label = f"{row['program_base']} {row['approx_type']}"
-        plt.annotate(label, (row["tempo"], row["error"]), xytext=(6, 5), textcoords="offset points")
+        plt.scatter(row["tempo"], row["error"], s=95, label=label)
 
+    plt.xscale("log")
+    plt.yscale("log")
     plt.xlabel("Tempo medio (s)")
-    plt.ylabel("Erro relativo medio")
+    plt.ylabel("Erro relativo medio (escala log)")
     plt.title("Custo computacional vs erro aproximado")
+    outside_legend(ncol=2)
     save_plot("07_tempo_vs_erro.png")
 
 

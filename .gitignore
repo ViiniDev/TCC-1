@@ -1,0 +1,10 @@
+Codigos_Linux/venv/
+Codigos_Linux/conv_linear
+Codigos_Linux/conv_malloc
+Codigos_Linux/dgemm
+Codigos_Linux/conv_linear_approx
+Codigos_Linux/conv_malloc_approx
+Codigos_Linux/dgemm_approx
+__pycache__/
+*.o
+*.exe
