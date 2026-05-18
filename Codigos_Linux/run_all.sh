@@ -32,6 +32,20 @@ extract_metric() {
     echo "$value"
 }
 
+extract_last_metric() {
+    local output="$1"
+    local pattern="$2"
+    local value
+
+    value=$(echo "$output" | sed -n "$pattern" | tail -n 1)
+
+    if [ -z "$value" ]; then
+        value=0
+    fi
+
+    echo "$value"
+}
+
 extract_perf_counter() {
     local output="$1"
     local event="$2"
@@ -72,11 +86,11 @@ write_row() {
     instructions=$(extract_perf_counter "$output" "instructions")
     cache_references=$(extract_perf_counter "$output" "cache-references")
     cache_misses=$(extract_perf_counter "$output" "cache-misses")
-    checksum=$(extract_metric "$output" 's/^Checksum \([0-9.eE+-]*\).*/\1/p')
-    error_abs_mean=$(extract_metric "$output" 's/^ErrorAbsMean \([0-9.eE+-]*\).*/\1/p')
-    error_rel_mean=$(extract_metric "$output" 's/^ErrorRelMean \([0-9.eE+-]*\).*/\1/p')
-    rmse=$(extract_metric "$output" 's/^RMSE \([0-9.eE+-]*\).*/\1/p')
-    error_max=$(extract_metric "$output" 's/^ErrorMax \([0-9.eE+-]*\).*/\1/p')
+    checksum=$(extract_last_metric "$output" 's/^Checksum \([0-9.eE+-]*\).*/\1/p')
+    error_abs_mean=$(extract_last_metric "$output" 's/^ErrorAbsMean \([0-9.eE+-]*\).*/\1/p')
+    error_rel_mean=$(extract_last_metric "$output" 's/^ErrorRelMean \([0-9.eE+-]*\).*/\1/p')
+    rmse=$(extract_last_metric "$output" 's/^RMSE \([0-9.eE+-]*\).*/\1/p')
+    error_max=$(extract_last_metric "$output" 's/^ErrorMax \([0-9.eE+-]*\).*/\1/p')
 
     if [ "$mode" = "exact" ]; then
         error_abs_mean=0
