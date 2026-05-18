@@ -1,72 +1,186 @@
-# Convolução e DGEMM com Análise Experimental de Desempenho
+# Convolucao, DGEMM e Computacao Aproximada
 
-Este projeto implementa:
+Este projeto mede o desempenho de operacoes com matrizes e compara execucoes exatas com execucoes aproximadas.
 
-* Convolução 2D discreta
-* Multiplicação densa (DGEMM)
-* Análise microarquitetural com `perf`
-* Automatização experimental
-* Consolidação estatística
+Ele cobre:
 
-O objetivo é avaliar desempenho computacional considerando:
+- Convolucao 2D com memoria contigua (`conv_linear`)
+- Convolucao 2D com alocacao por linhas (`conv_malloc`)
+- Multiplicacao densa de matrizes blocada (`dgemm`)
+- Versoes aproximadas com reducao de precisao (`float`)
+- Versoes aproximadas com reducao de operacoes (`skip_kernel` e `skip_k`)
+- Coleta de metricas com `perf`
+- Calculo de erro numerico
+- Geracao de graficos para analise experimental
 
-* Complexidade teórica
-* Layout de memória
-* Escalabilidade
-* Comportamento de cache
-* IPC (Instructions Per Cycle)
+## Estrutura
 
----
-
-# 📂 Estrutura do Projeto
-
-```
-.
-├── main_linear.c
-├── main_malloc.c
-├── dgemm_naive.c
-├── run_all.sh
-├── analysis.py
-├── resultados.csv
-└── resumo_estatistico.csv
+```text
+Codigos_Linux/
+  Makefile
+  main_linear.c
+  main_malloc.c
+  dgemm_blocked.c
+  conv_linear_approx.c
+  conv_malloc_approx.c
+  dgemm_approx.c
+  run_all.sh
+  analysis.py
+  plot_metrics.py
 ```
 
----
-
-# 🔧 Compilação
+## Requisitos no Ubuntu
 
 ```bash
-gcc -O3 -march=native -o conv_linear main_linear.c -lm
-gcc -O3 -march=native -o conv_malloc main_malloc.c -lm
-gcc -O3 -march=native -o dgemm dgemm_naive.c
+sudo apt update
+sudo apt install build-essential linux-tools-common linux-tools-generic python3 python3-pip
+pip install pandas matplotlib
 ```
 
----
+## Compilacao
 
-# ⚙ Execução Automatizada
+```bash
+cd Codigos_Linux
+make
+```
+
+Executaveis gerados:
+
+```text
+conv_linear
+conv_malloc
+dgemm
+conv_linear_approx
+conv_malloc_approx
+dgemm_approx
+```
+
+Para limpar:
+
+```bash
+make clean
+```
+
+## Execucao Manual
+
+### Convolucao exata
+
+```bash
+./conv_linear <N> <dist> <K> [seed]
+./conv_malloc <N> <dist> <K> [seed]
+```
+
+Parametros:
+
+- `N`: tamanho da matriz
+- `dist`: `0` uniforme, `1` normal, `2` exponencial
+- `K`: tamanho do kernel, positivo, impar e menor ou igual a `N`
+- `seed`: semente opcional para reproduzir a mesma entrada
+
+Exemplo:
+
+```bash
+./conv_linear 512 0 3 12346
+./conv_malloc 512 0 3 12346
+```
+
+### Convolucao aproximada
+
+```bash
+./conv_linear_approx <N> <dist> <K> <approx_type> <seed>
+./conv_malloc_approx <N> <dist> <K> <approx_type> <seed>
+```
+
+Tipos de aproximacao:
+
+- `float`: executa a convolucao usando precisao simples internamente
+- `skip_kernel`: usa apenas parte do kernel e renormaliza os pesos usados
+
+Exemplo:
+
+```bash
+./conv_linear_approx 512 0 3 float 12346
+./conv_malloc_approx 512 0 3 skip_kernel 12346
+```
+
+Opcionalmente, os aproximados aceitam um ultimo argumento:
+
+- `measure`: executa apenas a aproximacao, ideal para medir com `perf`
+- `compare`: executa a aproximacao e calcula erro contra a referencia exata
+
+O `run_all.sh` usa os dois modos automaticamente para evitar que o calculo da referencia exata contamine as metricas do `perf`.
+
+### DGEMM exato
+
+```bash
+./dgemm <N> <BS> [seed]
+```
+
+Parametros:
+
+- `N`: tamanho da matriz
+- `BS`: tamanho do bloco
+- `seed`: semente opcional
+
+Exemplo:
+
+```bash
+./dgemm 512 32 12346
+```
+
+### DGEMM aproximado
+
+```bash
+./dgemm_approx <N> <BS> <approx_type> <seed>
+```
+
+Tipos de aproximacao:
+
+- `float`: multiplica usando precisao simples internamente
+- `skip_k`: reduz operacoes pulando parte do somatorio em `k`
+
+Exemplo:
+
+```bash
+./dgemm_approx 512 32 float 12346
+./dgemm_approx 512 32 skip_k 12346
+```
+
+Assim como nas convolucoes aproximadas, `dgemm_approx` tambem aceita `measure` ou `compare` como ultimo argumento opcional.
+
+## Execucao Automatizada
 
 ```bash
 chmod +x run_all.sh
 sudo ./run_all.sh
 ```
 
-Gera:
+O script executa 10 repeticoes para cada combinacao de:
 
-```
+- Programa
+- Tamanho `N`
+- Distribuicao de entrada
+- Kernel ou bloco
+- Tipo de aproximacao
+- Seed padronizada
+
+Ele gera:
+
+```text
 resultados.csv
 ```
 
----
+Colunas do CSV:
 
-# 📊 Consolidação Estatística
-
-Instalar dependências:
-
-```bash
-pip install pandas matplotlib
+```text
+program,mode,approx_type,N,dist,K,seed,tempo,cycles,instructions,
+cache_references,cache_misses,checksum,error_abs_mean,error_rel_mean,
+rmse,error_max
 ```
 
-Executar:
+Observacao: no `dgemm`, a coluna `K` armazena o tamanho do bloco (`BS`) e `dist` recebe `-`.
+
+## Analise Estatistica
 
 ```bash
 python3 analysis.py
@@ -74,217 +188,64 @@ python3 analysis.py
 
 Gera:
 
-```
+```text
 resumo_estatistico.csv
 ```
 
-Esse arquivo contém:
-
-* Média do tempo
-* Desvio padrão
-* IPC médio
-* Cache-miss médio
-
----
-
-# 📈 Metodologia Experimental
-
-Para cada combinação:
-
-* Programa (conv_linear, conv_malloc, dgemm)
-* N ∈ {500, 1000}
-* Distribuições ∈ {Uniforme, Normal, Exponencial}
-* Kernel ∈ {3,5}
-* 5 repetições
-
-Métricas coletadas:
-
-* Tempo (clock_gettime)
-* cycles
-* instructions
-* cache-misses
-
----
-
-# 📊 Resultados Observados
-
-## Escalabilidade
-
-* Convolução: crescimento ~ O(N²)
-* DGEMM: crescimento ~ O(N³)
-
-Confirmando modelo teórico.
-
----
-
-## Layout de Memória
-
-* Memória contígua mais eficiente
-* Menor taxa de cache-miss
-* IPC maior
-
-Confirma impacto da localidade espacial.
-
----
-
-## Impacto do Kernel
-
-* Tempo cresce proporcionalmente a K²
-* Instructions aumentam conforme esperado
-
----
-
-## IPC
-
-Valores médios entre 1.5 e 2.0 indicam:
-
-* Execução parcialmente compute-bound
-* Boa utilização do pipeline
-
----
-
-# 🔬 Boas Práticas Utilizadas
-
-* CPU em modo performance
-* Aplicações fechadas
-* Locale fixo (LC_ALL=C)
-* Execução única por medição
-* Repetições múltiplas
-* Consolidação estatística
-
----
-
-# 📌 Conclusão
-
-O projeto valida experimentalmente:
-
-* A complexidade assintótica teórica
-* O impacto do layout de memória
-* A diferença estrutural entre convolução e multiplicação densa
-* O comportamento microarquitetural medido por IPC e cache-misses
-
----
-
-
-# ✅ 1️⃣ Verificação Técnica dos Dados
-
-### ✔ Estrutura do CSV
-
-* 8 colunas corretas
-* Nenhum campo vazio
-* Valores numéricos coerentes
-* Perf sendo capturado corretamente
-* Tempo consistente com ciclos
-
-### ✔ Estabilidade experimental
-
-As repetições apresentam:
-
-* Variação < 2%
-* Sem outliers extremos
-* Sem valores zerados
-* Sem erro de parsing
-
-
----
-
-# 📊 2️⃣ Interpretação Científica dos Resultados
-
-
----
-
-## 🔹 A) Escalabilidade da Convolução
-
-Teoria:
-
-[
-O(N^2 \cdot K^2)
-]
-
-Observação experimental:
-
-* Ao dobrar N (500 → 1000)
-* O tempo cresce aproximadamente 4x
-
-
----
-
-## 🔹 B) Escalabilidade do DGEMM
-
-Teoria:
-
-[
-O(N^3)
-]
-
-Observação:
-
-* Ao dobrar N
-* O tempo cresce aproximadamente 8x
-
-✔ Crescimento cúbico confirmado experimentalmente.
-
-
----
-
-## 🔹 C) Linear vs malloc (Localidade de Memória)
-
-Resultado observado:
-
-* `conv_linear` consistentemente mais rápido
-* IPC maior
-* Cache-misses menores
-
-Interpretação:
-
-Memória contígua melhora:
-
-* Localidade espacial
-* Eficiência de cache
-* Aproveitamento do pipeline
-
-Conclusão experimental forte:
-
-> O layout contíguo reduz penalidades de cache e melhora desempenho.
-
----
-
-## 🔹 D) Impacto do Kernel (K)
-
-Comparando K=3 vs K=5:
-
-* Tempo aumenta proporcionalmente a K²
-* Instructions aumentam
-* Cache-miss varia pouco para N pequeno
-
-Isso indica que:
-
-* Para N pequeno, dados ainda cabem em cache
-* Para N maior, impacto tende a crescer
-
----
-
-## 🔹 E) IPC (Instructions Per Cycle)
-
-Valores observados:
-
-* Entre ~1.5 e ~2.0
-
-Interpretação:
-
-* Execução razoavelmente eficiente
-* Não totalmente memory-bound
-* Nem totalmente compute-bound
-
----
-
-# 🎯 Conclusão Técnica dos Resultados
-
-1. Convolução apresenta crescimento quadrático
-2. DGEMM apresenta crescimento cúbico
-3. Layout de memória impacta significativamente o desempenho
-4. IPC e cache-miss confirmam efeito da localidade espacial
-
-
-
----
+O resumo inclui:
+
+- Tempo medio
+- Desvio padrao
+- IPC medio
+- Taxa media de cache miss
+- Erro absoluto medio
+- Erro relativo medio
+- RMSE
+- Erro maximo
+- Speedup em relacao a versao exata
+
+## Graficos
+
+```bash
+python3 plot_metrics.py
+```
+
+Os graficos sao salvos em:
+
+```text
+results/
+```
+
+Arquivos gerados:
+
+```text
+01_tempo_por_N.png
+02_speedup_aproximado.png
+03_erro_relativo_medio.png
+04_erro_vs_speedup.png
+05_ipc_por_N.png
+06_cache_miss_rate_por_N.png
+07_tempo_vs_erro.png
+```
+
+Esses graficos foram pensados para apoiar a discussao do TCC:
+
+- Tempo de execucao por tamanho de matriz
+- Ganho de desempenho das aproximacoes
+- Erro relativo medio
+- Relacao entre erro e speedup
+- IPC
+- Cache miss rate
+- Custo computacional vs erro aproximado
+
+## Ideia Experimental
+
+As versoes exatas servem como referencia.
+
+As versoes aproximadas medem o ganho de desempenho aceitando perda numerica controlada. O projeto registra essa troca usando metricas de erro e speedup:
+
+```text
+speedup = tempo_exato / tempo_aproximado
+```
+
+Quanto maior o speedup, maior o ganho de desempenho. Quanto menor o erro, mais proximo o resultado aproximado fica da referencia exata.

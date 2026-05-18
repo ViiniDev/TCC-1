@@ -1,128 +1,245 @@
-import pandas as pd
-import matplotlib.pyplot as plt
 import os
 
-# carregar CSV
-df = pd.read_csv("resultados.csv")
+import matplotlib
 
-# garantir pasta de saída
-os.makedirs("results", exist_ok=True)
+matplotlib.use("Agg")
 
-# converter colunas
-numeric_cols = ["N","dist","K","tempo","cycles","instructions","cache_references","cache_misses"]
-for col in numeric_cols:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+import matplotlib.pyplot as plt
+import pandas as pd
 
-# métricas derivadas
-df["IPC"] = df["instructions"] / df["cycles"]
-df["cache_miss_rate"] = df["cache_misses"] / df["cache_references"]
 
-############################################
-# 1 Tempo vs tamanho da matriz
-############################################
+RESULTS_DIR = "results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
-plt.figure()
+plt.rcParams.update(
+    {
+        "figure.figsize": (11, 6.5),
+        "figure.dpi": 120,
+        "savefig.dpi": 300,
+        "axes.grid": True,
+        "grid.alpha": 0.25,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "font.size": 11,
+        "axes.titlesize": 15,
+        "axes.labelsize": 12,
+        "legend.fontsize": 9,
+    }
+)
 
-for prog in df["program"].unique():
-    sub = df[df["program"] == prog]
-    means = sub.groupby("N")["tempo"].mean()
-    plt.plot(means.index, means.values, marker='o', label=prog)
 
-plt.xlabel("Matrix Size (N)")
-plt.ylabel("Execution Time (s)")
-plt.title("Tempo vs Tamanho da Matriz")
-plt.legend()
-plt.grid()
+def load_data():
+    df = pd.read_csv("resultados.csv")
 
-plt.savefig("results/time_vs_N.png")
-plt.close()
+    numeric_cols = [
+        "N",
+        "K",
+        "seed",
+        "tempo",
+        "cycles",
+        "instructions",
+        "cache_references",
+        "cache_misses",
+        "checksum",
+        "error_abs_mean",
+        "error_rel_mean",
+        "rmse",
+        "error_max",
+    ]
 
-############################################
-# 2 IPC vs N
-############################################
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
-plt.figure()
+    df["IPC"] = df["instructions"] / df["cycles"]
+    df["cache_miss_rate"] = df["cache_misses"] / df["cache_references"]
+    df["program_base"] = df["program"].str.replace("_approx", "", regex=False)
+    df["series"] = df.apply(make_series_name, axis=1)
 
-for prog in df["program"].unique():
-    sub = df[df["program"] == prog]
-    means = sub.groupby("N")["IPC"].mean()
-    plt.plot(means.index, means.values, marker='o', label=prog)
+    exact = (
+        df[df["mode"] == "exact"]
+        .groupby(["program_base", "N", "dist", "K"], dropna=False)["tempo"]
+        .mean()
+        .reset_index()
+        .rename(columns={"tempo": "tempo_exact"})
+    )
 
-plt.xlabel("Matrix Size (N)")
-plt.ylabel("IPC")
-plt.title("IPC vs Tamanho da Matriz")
-plt.legend()
-plt.grid()
+    df = df.merge(exact, on=["program_base", "N", "dist", "K"], how="left")
+    df["speedup_vs_exact"] = df["tempo_exact"] / df["tempo"]
+    df.loc[df["mode"] == "exact", "speedup_vs_exact"] = 1.0
 
-plt.savefig("results/ipc_vs_N.png")
-plt.close()
+    return df
 
-############################################
-# 3 Cache miss rate
-############################################
 
-plt.figure()
+def make_series_name(row):
+    if row["mode"] == "exact":
+        return f"{row['program_base']} exact"
 
-for prog in df["program"].unique():
-    sub = df[df["program"] == prog]
-    means = sub.groupby("N")["cache_miss_rate"].mean()
-    plt.plot(means.index, means.values, marker='o', label=prog)
+    return f"{row['program_base']} {row['approx_type']}"
 
-plt.xlabel("Matrix Size (N)")
-plt.ylabel("Cache Miss Rate")
-plt.title("Cache Miss Rate vs N")
-plt.legend()
-plt.grid()
 
-plt.savefig("results/cache_miss_rate_vs_N.png")
-plt.close()
+def save_plot(name):
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, name), bbox_inches="tight")
+    plt.close()
 
-############################################
-# 4 Tempo vs Kernel (apenas convolução)
-############################################
 
-conv = df[df["program"] == "conv_malloc"]
-
-if not conv.empty:
+def plot_time_by_n(df):
+    grouped = (
+        df.groupby(["series", "N"], dropna=False)["tempo"]
+        .mean()
+        .reset_index()
+        .sort_values(["series", "N"])
+    )
 
     plt.figure()
 
-    for K in conv["K"].unique():
-        sub = conv[conv["K"] == K]
-        means = sub.groupby("N")["tempo"].mean()
-        plt.plot(means.index, means.values, marker='o', label=f"K={K}")
+    for series, sub in grouped.groupby("series"):
+        plt.plot(sub["N"], sub["tempo"], marker="o", linewidth=2, label=series)
 
-    plt.xlabel("Matrix Size (N)")
-    plt.ylabel("Execution Time (s)")
-    plt.title("Convolução: Tempo vs Kernel Size")
-    plt.legend()
-    plt.grid()
+    plt.xlabel("Tamanho da matriz (N)")
+    plt.ylabel("Tempo medio (s)")
+    plt.title("Tempo de execucao por tamanho da matriz")
+    plt.legend(ncol=2)
+    save_plot("01_tempo_por_N.png")
 
-    plt.savefig("results/convolution_kernel_vs_time.png")
-    plt.close()
 
-############################################
-# 5 Tempo vs Distribuição
-############################################
+def plot_speedup(df):
+    approx = df[df["mode"] == "approx"]
 
-if not conv.empty:
+    grouped = (
+        approx.groupby(["series", "N"], dropna=False)["speedup_vs_exact"]
+        .mean()
+        .reset_index()
+        .sort_values(["series", "N"])
+    )
 
     plt.figure()
 
-    dist_names = {0:"Uniform",1:"Normal",2:"Exponential"}
+    for series, sub in grouped.groupby("series"):
+        plt.plot(sub["N"], sub["speedup_vs_exact"], marker="o", linewidth=2, label=series)
 
-    for d in conv["dist"].unique():
-        sub = conv[conv["dist"] == d]
-        means = sub.groupby("N")["tempo"].mean()
-        plt.plot(means.index, means.values, marker='o', label=dist_names.get(d,str(d)))
+    plt.axhline(1.0, color="black", linestyle="--", linewidth=1)
+    plt.xlabel("Tamanho da matriz (N)")
+    plt.ylabel("Speedup medio vs exato")
+    plt.title("Ganho de desempenho das versoes aproximadas")
+    plt.legend(ncol=2)
+    save_plot("02_speedup_aproximado.png")
 
-    plt.xlabel("Matrix Size (N)")
-    plt.ylabel("Execution Time (s)")
-    plt.title("Tempo vs Distribuição de Dados")
-    plt.legend()
-    plt.grid()
 
-    plt.savefig("results/distribution_vs_time.png")
-    plt.close()
+def plot_relative_error(df):
+    approx = df[df["mode"] == "approx"]
 
-print("Gráficos gerados na pasta results/")
+    grouped = (
+        approx.groupby(["series", "N"], dropna=False)["error_rel_mean"]
+        .mean()
+        .reset_index()
+        .sort_values(["series", "N"])
+    )
+
+    plt.figure()
+
+    for series, sub in grouped.groupby("series"):
+        plt.plot(sub["N"], sub["error_rel_mean"], marker="o", linewidth=2, label=series)
+
+    plt.xlabel("Tamanho da matriz (N)")
+    plt.ylabel("Erro relativo medio")
+    plt.title("Erro medio das versoes aproximadas")
+    plt.legend(ncol=2)
+    save_plot("03_erro_relativo_medio.png")
+
+
+def plot_error_vs_speedup(df):
+    approx = df[df["mode"] == "approx"]
+
+    grouped = (
+        approx.groupby(["series"], dropna=False)
+        .agg(speedup=("speedup_vs_exact", "mean"), error=("error_rel_mean", "mean"))
+        .reset_index()
+    )
+
+    plt.figure()
+    plt.scatter(grouped["error"], grouped["speedup"], s=90)
+
+    for _, row in grouped.iterrows():
+        plt.annotate(row["series"], (row["error"], row["speedup"]), xytext=(6, 5), textcoords="offset points")
+
+    plt.axhline(1.0, color="black", linestyle="--", linewidth=1)
+    plt.xlabel("Erro relativo medio")
+    plt.ylabel("Speedup medio vs exato")
+    plt.title("Troca entre erro e desempenho")
+    save_plot("04_erro_vs_speedup.png")
+
+
+def plot_ipc(df):
+    grouped = (
+        df.groupby(["series", "N"], dropna=False)["IPC"]
+        .mean()
+        .reset_index()
+        .sort_values(["series", "N"])
+    )
+
+    plt.figure()
+
+    for series, sub in grouped.groupby("series"):
+        plt.plot(sub["N"], sub["IPC"], marker="o", linewidth=2, label=series)
+
+    plt.xlabel("Tamanho da matriz (N)")
+    plt.ylabel("IPC medio")
+    plt.title("Instrucoes por ciclo por tamanho da matriz")
+    plt.legend(ncol=2)
+    save_plot("05_ipc_por_N.png")
+
+
+def plot_cache_miss_rate(df):
+    grouped = (
+        df.groupby(["series", "N"], dropna=False)["cache_miss_rate"]
+        .mean()
+        .reset_index()
+        .sort_values(["series", "N"])
+    )
+
+    plt.figure()
+
+    for series, sub in grouped.groupby("series"):
+        plt.plot(sub["N"], sub["cache_miss_rate"], marker="o", linewidth=2, label=series)
+
+    plt.xlabel("Tamanho da matriz (N)")
+    plt.ylabel("Taxa media de cache miss")
+    plt.title("Taxa de cache miss por tamanho da matriz")
+    plt.legend(ncol=2)
+    save_plot("06_cache_miss_rate_por_N.png")
+
+
+def plot_time_vs_error_by_program(df):
+    approx = df[df["mode"] == "approx"]
+
+    grouped = (
+        approx.groupby(["program_base", "approx_type"], dropna=False)
+        .agg(tempo=("tempo", "mean"), error=("error_rel_mean", "mean"))
+        .reset_index()
+    )
+
+    plt.figure()
+    plt.scatter(grouped["tempo"], grouped["error"], s=90)
+
+    for _, row in grouped.iterrows():
+        label = f"{row['program_base']} {row['approx_type']}"
+        plt.annotate(label, (row["tempo"], row["error"]), xytext=(6, 5), textcoords="offset points")
+
+    plt.xlabel("Tempo medio (s)")
+    plt.ylabel("Erro relativo medio")
+    plt.title("Custo computacional vs erro aproximado")
+    save_plot("07_tempo_vs_erro.png")
+
+
+df = load_data()
+
+plot_time_by_n(df)
+plot_speedup(df)
+plot_relative_error(df)
+plot_error_vs_speedup(df)
+plot_ipc(df)
+plot_cache_miss_rate(df)
+plot_time_vs_error_by_program(df)
+
+print(f"Graficos gerados em {RESULTS_DIR}/")
