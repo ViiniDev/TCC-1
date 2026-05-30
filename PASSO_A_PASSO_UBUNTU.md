@@ -7,14 +7,14 @@ Este guia comeca a partir do momento em que o projeto ja esta no GitHub e voce v
 Se ainda nao clonou o repositorio no Ubuntu:
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
-cd matrix_convolution/Codigos_Linux
+git clone https://github.com/ViiniDev/TCC-1.git
+cd TCC-1/Codigos_Linux
 ```
 
 Se o projeto ja esta clonado:
 
 ```bash
-cd matrix_convolution
+cd TCC-1
 git pull
 cd Codigos_Linux
 ```
@@ -58,7 +58,7 @@ pip install pandas matplotlib
 Entre na pasta dos codigos:
 
 ```bash
-cd matrix_convolution/Codigos_Linux
+cd TCC-1/Codigos_Linux
 ```
 
 Limpe executaveis antigos:
@@ -249,8 +249,8 @@ Se rodar em VM, os resultados ainda podem ser usados, mas descreva no TCC que o 
 ## Sequencia Completa Resumida
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
-cd matrix_convolution/Codigos_Linux
+git clone https://github.com/ViiniDev/TCC-1.git
+cd TCC-1/Codigos_Linux
 
 sudo apt update
 sudo apt install build-essential linux-tools-common linux-tools-generic python3 python3-pip
