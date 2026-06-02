@@ -25,6 +25,9 @@ for col in numeric_cols:
 df["IPC"] = df["instructions"] / df["cycles"]
 df["cache_miss_rate"] = df["cache_misses"] / df["cache_references"]
 df["program_base"] = df["program"].str.replace("_approx", "", regex=False)
+df["parameter_type"] = df["program_base"].apply(lambda value: "BS" if value == "dgemm" else "K")
+df["kernel_size"] = df["K"].where(df["program_base"] != "dgemm")
+df["block_size"] = df["K"].where(df["program_base"] == "dgemm")
 
 group_cols = ["program_base", "program", "mode", "approx_type", "N", "dist", "K"]
 
@@ -44,6 +47,10 @@ summary = (
     )
     .reset_index()
 )
+
+summary["parameter_type"] = summary["program_base"].apply(lambda value: "BS" if value == "dgemm" else "K")
+summary["kernel_size"] = summary["K"].where(summary["program_base"] != "dgemm")
+summary["block_size"] = summary["K"].where(summary["program_base"] == "dgemm")
 
 exact = summary[summary["mode"] == "exact"][
     ["program_base", "N", "dist", "K", "tempo_mean"]

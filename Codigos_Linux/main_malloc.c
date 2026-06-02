@@ -224,8 +224,6 @@ int main(int argc, char *argv[]) {
 
     struct timespec start, end;
 
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
     mat = gera_matriz(N, (dist_t)dist);
     ker = gera_kernel(K);
 
@@ -234,6 +232,8 @@ int main(int argc, char *argv[]) {
         libera_matriz(ker, K);
         return 1;
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     saida = convolucao(mat, N, ker, K);
 

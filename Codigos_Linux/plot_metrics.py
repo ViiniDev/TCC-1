@@ -13,17 +13,19 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 plt.rcParams.update(
     {
-        "figure.figsize": (11, 6.5),
+        "figure.figsize": (12, 7),
         "figure.dpi": 120,
         "savefig.dpi": 300,
         "axes.grid": True,
         "grid.alpha": 0.25,
         "axes.spines.top": False,
         "axes.spines.right": False,
-        "font.size": 11,
-        "axes.titlesize": 15,
-        "axes.labelsize": 12,
-        "legend.fontsize": 9,
+        "font.size": 15,
+        "axes.titlesize": 19,
+        "axes.labelsize": 17,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
+        "legend.fontsize": 12,
     }
 )
 
@@ -53,6 +55,9 @@ def load_data():
     df["IPC"] = df["instructions"] / df["cycles"]
     df["cache_miss_rate"] = df["cache_misses"] / df["cache_references"]
     df["program_base"] = df["program"].str.replace("_approx", "", regex=False)
+    df["parameter_type"] = df["program_base"].apply(lambda value: "BS" if value == "dgemm" else "K")
+    df["kernel_size"] = df["K"].where(df["program_base"] != "dgemm")
+    df["block_size"] = df["K"].where(df["program_base"] == "dgemm")
     df["series"] = df.apply(make_series_name, axis=1)
 
     exact = (
@@ -79,7 +84,10 @@ def make_series_name(row):
 
 def save_plot(name):
     plt.tight_layout()
-    plt.savefig(os.path.join(RESULTS_DIR, name), bbox_inches="tight")
+    stem, ext = os.path.splitext(name)
+    output_name = name if ext.lower() == ".pdf" else f"{stem}.pdf"
+    plt.savefig(os.path.join(RESULTS_DIR, output_name), bbox_inches="tight")
+
     plt.close()
 
 
@@ -240,6 +248,76 @@ def plot_time_vs_error_by_program(df):
     save_plot("07_tempo_vs_erro.png")
 
 
+def plot_dgemm_time_by_block(df):
+    dgemm = df[(df["program_base"] == "dgemm") & (df["mode"] == "exact")]
+
+    grouped = (
+        dgemm.groupby(["N", "block_size"], dropna=False)["tempo"]
+        .mean()
+        .reset_index()
+        .sort_values(["N", "block_size"])
+    )
+
+    plt.figure()
+
+    for n, sub in grouped.groupby("N"):
+        plt.plot(sub["block_size"], sub["tempo"], marker="o", linewidth=2, label=f"N={int(n)}")
+
+    plt.xlabel("Tamanho do bloco (BS)")
+    plt.ylabel("Tempo medio (s)")
+    plt.title("DGEMM exato: tempo por tamanho de bloco")
+    outside_legend(ncol=3)
+    save_plot("08_dgemm_tempo_por_bloco.png")
+
+
+def plot_dgemm_speedup_by_block(df):
+    dgemm = df[(df["program_base"] == "dgemm") & (df["mode"] == "approx")]
+
+    grouped = (
+        dgemm.groupby(["approx_type", "N", "block_size"], dropna=False)["speedup_vs_exact"]
+        .mean()
+        .reset_index()
+        .sort_values(["approx_type", "N", "block_size"])
+    )
+
+    plt.figure()
+
+    for (approx_type, n), sub in grouped.groupby(["approx_type", "N"]):
+        label = f"{approx_type} N={int(n)}"
+        plt.plot(sub["block_size"], sub["speedup_vs_exact"], marker="o", linewidth=2, label=label)
+
+    plt.axhline(1.0, color="black", linestyle="--", linewidth=1)
+    plt.xlabel("Tamanho do bloco (BS)")
+    plt.ylabel("Speedup medio vs exato")
+    plt.title("DGEMM aproximado: speedup por tamanho de bloco")
+    outside_legend(ncol=3)
+    save_plot("09_dgemm_speedup_por_bloco.png")
+
+
+def plot_dgemm_error_by_block(df):
+    dgemm = df[(df["program_base"] == "dgemm") & (df["mode"] == "approx")]
+
+    grouped = (
+        dgemm.groupby(["approx_type", "N", "block_size"], dropna=False)["error_rel_mean"]
+        .mean()
+        .reset_index()
+        .sort_values(["approx_type", "N", "block_size"])
+    )
+
+    plt.figure()
+
+    for (approx_type, n), sub in grouped.groupby(["approx_type", "N"]):
+        label = f"{approx_type} N={int(n)}"
+        plt.plot(sub["block_size"], sub["error_rel_mean"], marker="o", linewidth=2, label=label)
+
+    plt.yscale("log")
+    plt.xlabel("Tamanho do bloco (BS)")
+    plt.ylabel("Erro relativo medio (escala log)")
+    plt.title("DGEMM aproximado: erro por tamanho de bloco")
+    outside_legend(ncol=3)
+    save_plot("10_dgemm_erro_por_bloco.png")
+
+
 df = load_data()
 
 plot_time_by_n(df)
@@ -249,5 +327,8 @@ plot_error_vs_speedup(df)
 plot_ipc(df)
 plot_cache_miss_rate(df)
 plot_time_vs_error_by_program(df)
+plot_dgemm_time_by_block(df)
+plot_dgemm_speedup_by_block(df)
+plot_dgemm_error_by_block(df)
 
-print(f"Graficos gerados em {RESULTS_DIR}/")
+print(f"Graficos PDF gerados em {RESULTS_DIR}/")

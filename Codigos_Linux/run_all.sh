@@ -4,6 +4,9 @@ set -u
 
 CSV="resultados.csv"
 
+# Coluna K:
+# - convolucoes: tamanho do kernel
+# - DGEMM: tamanho do bloco (BS)
 echo "program,mode,approx_type,N,dist,K,seed,tempo,cycles,instructions,cache_references,cache_misses,checksum,error_abs_mean,error_rel_mean,rmse,error_max" > "$CSV"
 
 CONV_EXACT_PROGRAMS=("conv_linear" "conv_malloc")
