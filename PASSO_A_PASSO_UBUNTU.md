@@ -1,17 +1,17 @@
 # Passo a Passo para Rodar no Ubuntu
 
-Este guia comeca a partir do momento em que o projeto ja esta no GitHub e voce vai executar os experimentos no Ubuntu.
+Este guia começa a partir do momento em que o projeto já está no GitHub e você vai executar os experimentos no Ubuntu.
 
 ## 1. Baixar ou Atualizar o Projeto
 
-Se ainda nao clonou o repositorio no Ubuntu:
+Se ainda não clonou o repositório no Ubuntu:
 
 ```bash
 git clone https://github.com/ViiniDev/TCC-1.git
 cd TCC-1/Codigos_Linux
 ```
 
-Se o projeto ja esta clonado:
+Se o projeto já está clonado:
 
 ```bash
 cd TCC-1
@@ -19,7 +19,7 @@ git pull
 cd Codigos_Linux
 ```
 
-## 2. Instalar Dependencias
+## 2. Instalar Dependências
 
 Atualize os pacotes:
 
@@ -33,13 +33,13 @@ Instale compilador, make, perf, Python e pip:
 sudo apt install build-essential linux-tools-common linux-tools-generic python3 python3-pip
 ```
 
-Instale as bibliotecas Python usadas na analise e nos graficos:
+Instale as bibliotecas Python usadas na análise e nos gráficos:
 
 ```bash
 pip install pandas matplotlib
 ```
 
-Se o Ubuntu bloquear instalacao global via `pip`, use:
+Se o Ubuntu bloquear instalação global via `pip`, use:
 
 ```bash
 python3 -m pip install pandas matplotlib --break-system-packages
@@ -55,13 +55,13 @@ pip install pandas matplotlib
 
 ## 3. Compilar o Projeto
 
-Entre na pasta dos codigos:
+Entre na pasta dos códigos:
 
 ```bash
 cd TCC-1/Codigos_Linux
 ```
 
-Limpe executaveis antigos:
+Limpe executáveis antigos:
 
 ```bash
 make clean
@@ -73,7 +73,7 @@ Compile tudo:
 make
 ```
 
-Ao final, devem existir estes executaveis:
+Ao final, devem existir estes executáveis:
 
 ```text
 conv_linear
@@ -84,23 +84,23 @@ conv_malloc_approx
 dgemm_approx
 ```
 
-## 4. Fazer Testes Rapidos
+## 4. Fazer Testes Rápidos
 
 Antes de rodar o experimento completo, execute alguns testes pequenos.
 
-Convolucao exata:
+Convolução exata:
 
 ```bash
 ./conv_linear 512 0 3 12346
 ```
 
-Convolucao aproximada com `float`:
+Convolução aproximada com `float`:
 
 ```bash
 ./conv_linear_approx 512 0 3 float 12346 compare
 ```
 
-Convolucao aproximada com `skip_kernel`:
+Convolução aproximada com `skip_kernel`:
 
 ```bash
 ./conv_malloc_approx 512 0 3 skip_kernel 12346 compare
@@ -118,23 +118,23 @@ DGEMM aproximado com `skip_k`:
 ./dgemm_approx 512 32 skip_k 12346 compare
 ```
 
-Se todos imprimirem `Tempo`, `Checksum` e, nos aproximados, metricas de erro, o projeto esta pronto para o experimento completo.
+Se todos imprimirem `Tempo`, `Checksum` e, nos aproximados, métricas de erro, o projeto está pronto para o experimento completo.
 
 ## 5. Testar o Perf Manualmente
 
-Opcionalmente, teste o `perf` em uma execucao simples:
+Opcionalmente, teste o `perf` em uma execução simples:
 
 ```bash
 perf stat -e cycles,instructions,cache-references,cache-misses ./conv_linear 512 0 3 12346
 ```
 
-Teste tambem em uma versao aproximada:
+Teste também em uma versão aproximada:
 
 ```bash
 perf stat -e cycles,instructions,cache-references,cache-misses ./conv_linear_approx 512 0 3 float 12346 measure
 ```
 
-Se houver erro de permissao, rode com `sudo`:
+Se houver erro de permissão, rode com `sudo`:
 
 ```bash
 sudo perf stat -e cycles,instructions,cache-references,cache-misses ./conv_linear 512 0 3 12346
@@ -142,7 +142,7 @@ sudo perf stat -e cycles,instructions,cache-references,cache-misses ./conv_linea
 
 ## 6. Rodar o Experimento Completo
 
-Garanta permissao de execucao no script:
+Garanta permissão de execução no script:
 
 ```bash
 chmod +x run_all.sh
@@ -156,15 +156,15 @@ sudo ./run_all.sh
 
 O script roda automaticamente:
 
-- versoes exatas;
-- versoes aproximadas;
-- 10 repeticoes;
+- versões exatas;
+- versões aproximadas;
+- 10 repetições;
 - diferentes tamanhos de matriz;
-- diferentes distribuicoes;
+- diferentes distribuições;
 - diferentes kernels;
 - diferentes blocos do DGEMM;
 - coleta com `perf`;
-- calculo de erro das aproximacoes.
+- cálculo de erro das aproximações.
 
 Ao final, ele gera:
 
@@ -172,7 +172,7 @@ Ao final, ele gera:
 resultados.csv
 ```
 
-## 7. Gerar Resumo Estatistico
+## 7. Gerar Resumo Estatístico
 
 Depois que `resultados.csv` for criado, rode:
 
@@ -186,9 +186,9 @@ Isso gera:
 resumo_estatistico.csv
 ```
 
-Esse arquivo contem medias, desvios, IPC, cache miss rate, erros e speedup.
+Esse arquivo contém médias, desvios, IPC, cache miss rate, erros e speedup.
 
-## 8. Gerar Graficos
+## 8. Gerar Gráficos
 
 Rode:
 
@@ -196,13 +196,13 @@ Rode:
 python3 plot_metrics.py
 ```
 
-Os graficos serao salvos na pasta:
+Os gráficos serão salvos na pasta:
 
 ```text
 results/
 ```
 
-Graficos gerados:
+Gráficos gerados:
 
 ```text
 01_tempo_por_N.png
@@ -225,7 +225,7 @@ ls -lh resultados.csv resumo_estatistico.csv
 ls -lh results/
 ```
 
-Voce deve ter:
+Você deve ter:
 
 ```text
 resultados.csv
@@ -233,20 +233,20 @@ resumo_estatistico.csv
 results/*.png
 ```
 
-## 10. Observacoes Importantes para o TCC
+## 10. Observações Importantes para o TCC
 
-Para resultados mais confiaveis:
+Para resultados mais confiáveis:
 
-- prefira rodar em Ubuntu instalado diretamente na maquina fisica;
+- prefira rodar em Ubuntu instalado diretamente na máquina física;
 - evite rodar em modo economia de energia;
 - feche programas pesados durante os testes;
 - mantenha o notebook ligado na tomada;
-- evite usar a maquina enquanto o experimento roda;
+- evite usar a máquina enquanto o experimento roda;
 - use sempre o mesmo ambiente para todos os testes.
 
-Se rodar em VM, os resultados ainda podem ser usados, mas descreva no TCC que o ambiente era virtualizado e que a comparacao e relativa dentro do mesmo ambiente experimental.
+Se rodar em VM, os resultados ainda podem ser usados, mas descreva no TCC que o ambiente era virtualizado e que a comparação e relativa dentro do mesmo ambiente experimental.
 
-## Sequencia Completa Resumida
+## Sequência Completa Resumida
 
 ```bash
 git clone https://github.com/ViiniDev/TCC-1.git
